@@ -1,0 +1,14 @@
+{
+    "builds": [
+    {
+    "src": "acme_relutech/wsgi.py",
+    "use": "@vercel/python"
+    }
+    ],
+    "routes": [
+    {
+    "src": "/(.*)",
+    "dest": "acme_relutech/wsgi.py"
+    }
+    ]
+    }
