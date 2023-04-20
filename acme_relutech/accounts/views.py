@@ -5,6 +5,7 @@ from accounts.forms import CustomUserCreationForm
 from django.shortcuts import redirect, render
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
 
 def register(request):
@@ -30,9 +31,16 @@ class CustomLoginView(LoginView):
 def dashboard(request):
     user = request.user
     
+    if user.is_superuser:
+        developers = CustomUser.objects.get_developers()
+        print(f"{developers=}")
+        context = {
+            "user": user,
+            "developers": developers,
+        }
+    else:
+        context = {
+            "user": user,
+        }
     
-    context = {
-        "user": user,
-        
-    }
     return render(request, "dashboard.html", context)

@@ -3,5 +3,13 @@
     <h1>Welcome, {{ user.username }}</h1>
     <a href="{% url 'logout' %}" class="btn btn-link">Logout</a>
     <h2>Dashboard</h2>
-    
+    {% if user.is_admin %}
+        <h3>Developers:</h3>
+        <ul>
+        {% for developer in developers %}
+            <li>{{ developer.username }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+</div>
 {% endblock %}
