@@ -26,6 +26,11 @@ class DeveloperListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        print(request.user.is_authenticated)
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        if not request.user.is_admin:
+            return Response(status=status.HTTP_403_FORBIDDEN)
         developers = CustomUser.objects.filter(is_admin=False)
         serializer = DeveloperSerializer(developers, many=True)
         return Response(serializer.data)
