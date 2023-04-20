@@ -11,8 +11,9 @@ from accounts.forms import CustomUserCreationForm
 # from .serializers import AssetSerializer, DeveloperWithAssetsSerializer
 from assets.serializers import AssetSerializer, DeveloperWithAssetsSerializer
 from accounts.serializers import DeveloperSerializer
-
 from assets.models import Asset
+from licenses.models import License
+from licenses.serializers import LicenseSerializer, DeveloperWithLicensesSerializer
 
 
 # TODO: Rename classes to friendly ones. install flake8, black and isort
@@ -123,4 +124,51 @@ class AssetsAPIView(APIView):
         asset.delete()
         assets = Asset.objects.filter(developer=developer)
         serializer = AssetSerializer(assets, many=True)
+        return Response(serializer.data)
+
+
+class LicensesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        if not request.user.is_authenticated or not request.user.is_admin:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        licenses = License.objects.filter(developer=pk) if pk else License.objects.all()
+        serializer = LicenseSerializer(licenses, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, pk):
+        if not request.user.is_authenticated or not request.user.is_admin:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        developer = CustomUser.objects.filter(pk=pk, is_admin=False).first()
+        if developer is None:
+            return Response({'error': 'Developer not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = LicenseSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save(developer=developer)
+        licenses = License.objects.filter(developer=developer)
+        serializer = LicenseSerializer(licenses, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, developer_id, license_id):
+        if not request.user.is_authenticated or not request.user.is_admin:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        developer = CustomUser.objects.filter(pk=developer_id, is_admin=False).first()
+        if developer is None:
+            return Response({'error': 'Developer not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        license = License.objects.filter(pk=license_id, developer=developer).first()
+        if license is None:
+            return Response({'error': 'License not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        license.delete()
+        licenses = License.objects.filter(developer=developer)
+        serializer = LicenseSerializer(licenses, many=True)
         return Response(serializer.data)
