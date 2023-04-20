@@ -19,5 +19,5 @@ class Asset(models.Model):
     brand = models.CharField(max_length=50)
     model = models.CharField(max_length=50)
     type = models.CharField(max_length=50, choices=ASSET_TYPE_CHOICES)
-    developer = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    developer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='assets')
 
