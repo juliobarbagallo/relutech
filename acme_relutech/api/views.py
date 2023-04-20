@@ -39,11 +39,17 @@ class DevelopersAPIView(APIView):
         
         if not request.user.is_admin:
             return Response(status=status.HTTP_403_FORBIDDEN)
-        
-        developers = CustomUser.objects.filter(is_admin=False).prefetch_related('assets')
-        serializer = DeveloperWithAssetsSerializer(developers, many=True)
-
-        return Response(serializer.data)
+                
+        developers_asset = CustomUser.objects.filter(is_admin=False).prefetch_related('assets')
+        developers_licenses = CustomUser.objects.filter(is_admin=False).prefetch_related('licenses')        
+        asset_serializer = DeveloperWithAssetsSerializer(developers_asset, many=True)
+        license_serializer = DeveloperWithAssetsSerializer(developers_licenses, many=True)
+        data = {
+            'assets': asset_serializer.data,
+            'licenses': license_serializer.data
+        }
+    
+        return Response(data)
 
     def post(self, request):
         if not request.user.is_authenticated or not request.user.is_admin:

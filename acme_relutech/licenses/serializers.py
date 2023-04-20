@@ -10,7 +10,7 @@ class LicenseSerializer(serializers.ModelSerializer):
         read_only_fields = ('developer',)
 
 class DeveloperWithLicensesSerializer(serializers.ModelSerializer):
-    assets = LicenseSerializer(many=True, read_only=True)
+    licenses = LicenseSerializer(many=True, read_only=True)
 
     class Meta:
         model = CustomUser
