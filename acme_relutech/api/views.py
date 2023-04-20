@@ -1,91 +1,96 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth import authenticate, login
-
-from rest_framework.generics import ListCreateAPIView
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
-from accounts.models import CustomUser
 from accounts.forms import CustomUserCreationForm
-# from .serializers import AssetSerializer, DeveloperWithAssetsSerializer
-from assets.serializers import AssetSerializer, DeveloperWithAssetsSerializer
+from accounts.models import CustomUser
 from accounts.serializers import DeveloperSerializer, SwaggDeveloperSerializer
 from assets.models import Asset
-from licenses.models import License
-from licenses.serializers import LicenseSerializer, DeveloperWithLicensesSerializer
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
+# from .serializers import AssetSerializer, DeveloperWithAssetsSerializer
+from assets.serializers import AssetSerializer, DeveloperWithAssetsSerializer
+from django.contrib.auth import authenticate, login
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from licenses.models import License
+from licenses.serializers import DeveloperWithLicensesSerializer, LicenseSerializer
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 # TODO: Rename classes to friendly ones. install flake8, black and isort
 class UserLoginAPIView(APIView):
     def post(self, request, format=None):
-        username = request.data.get('username')
-        password = request.data.get('password')
+        username = request.data.get("username")
+        password = request.data.get("password")
 
         user = authenticate(request, username=username, password=password)
         if user is None:
-            return Response({'error': 'Invalid username or password'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid username or password"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         login(request, user)
-        return Response({'success': True})
-    
+        return Response({"success": True})
+
 
 class DevelopersAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_summary='Get developers, their assets and licenses',
+        operation_summary="Get developers, their assets and licenses",
         responses={
             200: openapi.Response(
-                description='OK',
+                description="OK",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        'assets': openapi.Schema(
+                        "assets": openapi.Schema(
                             type=openapi.TYPE_ARRAY,
-                            items=DeveloperWithAssetsSerializer().data
+                            items=DeveloperWithAssetsSerializer().data,
                         ),
-                        'licenses': openapi.Schema(
+                        "licenses": openapi.Schema(
                             type=openapi.TYPE_ARRAY,
-                            items=DeveloperWithLicensesSerializer().data
-                        )
-                    }
-                )
+                            items=DeveloperWithLicensesSerializer().data,
+                        ),
+                    },
+                ),
             ),
-            401: 'Unauthorized',
-            403: 'Forbidden'
-        }
+            401: "Unauthorized",
+            403: "Forbidden",
+        },
     )
     def get(self, request):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        
+
         if not request.user.is_admin:
             return Response(status=status.HTTP_403_FORBIDDEN)
-                
-        developers_asset = CustomUser.objects.filter(is_admin=False).prefetch_related('assets')
-        developers_licenses = CustomUser.objects.filter(is_admin=False).prefetch_related('licenses')        
+
+        developers_asset = CustomUser.objects.filter(is_admin=False).prefetch_related(
+            "assets"
+        )
+        developers_licenses = CustomUser.objects.filter(
+            is_admin=False
+        ).prefetch_related("licenses")
         asset_serializer = DeveloperWithAssetsSerializer(developers_asset, many=True)
-        license_serializer = DeveloperWithLicensesSerializer(developers_licenses, many=True)
-        data = {
-            'assets': asset_serializer.data,
-            'licenses': license_serializer.data
-        }
-    
+        license_serializer = DeveloperWithLicensesSerializer(
+            developers_licenses, many=True
+        )
+        data = {"assets": asset_serializer.data, "licenses": license_serializer.data}
+
         return Response(data)
-    
+
     @swagger_auto_schema(
         request_body=SwaggDeveloperSerializer,
-        responses={200: 'OK'},
-        operation_summary='Allows user developers creation',
-        operation_description='It creates new developers user on the DataBase.'
+        responses={200: "OK"},
+        operation_summary="Allows user developers creation",
+        operation_description="It creates new developers user on the DataBase.",
     )
     def post(self, request):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         form = CustomUserCreationForm(request.data)
         if form.is_valid():
@@ -99,41 +104,45 @@ class DevelopersAPIView(APIView):
         return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'username': openapi.Schema(type=openapi.TYPE_STRING),
-            'email': openapi.Schema(type=openapi.TYPE_STRING),
-            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
-            'is_admin': openapi.Schema(type=openapi.TYPE_BOOLEAN)
-        },
-        manual_parameters=[
-        openapi.Parameter(
-            'pk',
-            openapi.IN_PATH,
-            type=openapi.TYPE_INTEGER,
-            description='The ID of the developer to update',
-            required=True
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "username": openapi.Schema(type=openapi.TYPE_STRING),
+                "email": openapi.Schema(type=openapi.TYPE_STRING),
+                "is_active": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                "is_admin": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+            },
+            manual_parameters=[
+                openapi.Parameter(
+                    "pk",
+                    openapi.IN_PATH,
+                    type=openapi.TYPE_INTEGER,
+                    description="The ID of the developer to update",
+                    required=True,
+                ),
+            ],
+            required=["username"],
         ),
-    ],
-        required=['username']
-    ),
-    responses={
-        200: openapi.Response(description='Updated developer successfully'),
-        400: openapi.Response(description='Invalid request data'),
-        401: openapi.Response(description='Not authorized'),
-        404: openapi.Response(description='Developer not found')
-    },
-    operation_summary='Updates a developer',
-    operation_description='Updates a developer identified by the given primary key'
-)
+        responses={
+            200: openapi.Response(description="Updated developer successfully"),
+            400: openapi.Response(description="Invalid request data"),
+            401: openapi.Response(description="Not authorized"),
+            404: openapi.Response(description="Developer not found"),
+        },
+        operation_summary="Updates a developer",
+        operation_description="Updates a developer identified by the given primary key",
+    )
     def put(self, request, pk):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         developer = CustomUser.objects.filter(pk=pk, is_admin=False).first()
         if developer is None:
-            return Response({'error': 'Developer not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Developer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = DeveloperSerializer(developer, data=request.data, partial=True)
 
@@ -144,14 +153,16 @@ class DevelopersAPIView(APIView):
             return Response(serializer.data)
         # else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
 
 class AssetsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk=None):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         assets = Asset.objects.filter(developer=pk) if pk else Asset.objects.all()
         serializer = AssetSerializer(assets, many=True)
@@ -159,11 +170,15 @@ class AssetsAPIView(APIView):
 
     def post(self, request, pk):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         developer = CustomUser.objects.filter(pk=pk, is_admin=False).first()
         if developer is None:
-            return Response({'error': 'Developer not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Developer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = AssetSerializer(data=request.data)
 
@@ -177,15 +192,21 @@ class AssetsAPIView(APIView):
 
     def delete(self, request, developer_id, asset_id):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         developer = CustomUser.objects.filter(pk=developer_id, is_admin=False).first()
         if developer is None:
-            return Response({'error': 'Developer not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Developer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         asset = Asset.objects.filter(pk=asset_id, developer=developer).first()
         if asset is None:
-            return Response({'error': 'Asset not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Asset not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         asset.delete()
         assets = Asset.objects.filter(developer=developer)
@@ -198,7 +219,9 @@ class LicensesAPIView(APIView):
 
     def get(self, request, pk=None):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         licenses = License.objects.filter(developer=pk) if pk else License.objects.all()
         serializer = LicenseSerializer(licenses, many=True)
@@ -206,11 +229,15 @@ class LicensesAPIView(APIView):
 
     def post(self, request, pk):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         developer = CustomUser.objects.filter(pk=pk, is_admin=False).first()
         if developer is None:
-            return Response({'error': 'Developer not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Developer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = LicenseSerializer(data=request.data)
 
@@ -224,15 +251,21 @@ class LicensesAPIView(APIView):
 
     def delete(self, request, developer_id, license_id):
         if not request.user.is_authenticated or not request.user.is_admin:
-            return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"error": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         developer = CustomUser.objects.filter(pk=developer_id, is_admin=False).first()
         if developer is None:
-            return Response({'error': 'Developer not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Developer not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         license = License.objects.filter(pk=license_id, developer=developer).first()
         if license is None:
-            return Response({'error': 'License not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "License not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         license.delete()
         licenses = License.objects.filter(developer=developer)
