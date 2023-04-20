@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group, Permission
 from django.db import models
 
-
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, username, password=None, is_admin=False, **extra_fields):
         if not email:
@@ -24,7 +23,6 @@ class CustomUserManager(BaseUserManager):
 
     def get_developers(self):
         return self.filter(is_admin=False)
-
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
