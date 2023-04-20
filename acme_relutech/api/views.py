@@ -10,10 +10,13 @@ from accounts.models import CustomUser
 from accounts.forms import CustomUserCreationForm
 # from .serializers import AssetSerializer, DeveloperWithAssetsSerializer
 from assets.serializers import AssetSerializer, DeveloperWithAssetsSerializer
-from accounts.serializers import DeveloperSerializer
+from accounts.serializers import DeveloperSerializer, SwaggDeveloperSerializer
 from assets.models import Asset
 from licenses.models import License
 from licenses.serializers import LicenseSerializer, DeveloperWithLicensesSerializer
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 
 
 # TODO: Rename classes to friendly ones. install flake8, black and isort
@@ -33,6 +36,29 @@ class UserLoginAPIView(APIView):
 class DevelopersAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary='Get developers, their assets and licenses',
+        responses={
+            200: openapi.Response(
+                description='OK',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'assets': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=DeveloperWithAssetsSerializer().data
+                        ),
+                        'licenses': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=DeveloperWithLicensesSerializer().data
+                        )
+                    }
+                )
+            ),
+            401: 'Unauthorized',
+            403: 'Forbidden'
+        }
+    )
     def get(self, request):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
@@ -43,14 +69,20 @@ class DevelopersAPIView(APIView):
         developers_asset = CustomUser.objects.filter(is_admin=False).prefetch_related('assets')
         developers_licenses = CustomUser.objects.filter(is_admin=False).prefetch_related('licenses')        
         asset_serializer = DeveloperWithAssetsSerializer(developers_asset, many=True)
-        license_serializer = DeveloperWithAssetsSerializer(developers_licenses, many=True)
+        license_serializer = DeveloperWithLicensesSerializer(developers_licenses, many=True)
         data = {
             'assets': asset_serializer.data,
             'licenses': license_serializer.data
         }
     
         return Response(data)
-
+    
+    @swagger_auto_schema(
+        request_body=SwaggDeveloperSerializer,
+        responses={200: 'OK'},
+        operation_summary='Allows user developers creation',
+        operation_description='It creates new developers user on the DataBase.'
+    )
     def post(self, request):
         if not request.user.is_authenticated or not request.user.is_admin:
             return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -66,7 +98,35 @@ class DevelopersAPIView(APIView):
         # else:
         return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        
+    @swagger_auto_schema(
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'username': openapi.Schema(type=openapi.TYPE_STRING),
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+            'is_admin': openapi.Schema(type=openapi.TYPE_BOOLEAN)
+        },
+        manual_parameters=[
+        openapi.Parameter(
+            'pk',
+            openapi.IN_PATH,
+            type=openapi.TYPE_INTEGER,
+            description='The ID of the developer to update',
+            required=True
+        ),
+    ],
+        required=['username']
+    ),
+    responses={
+        200: openapi.Response(description='Updated developer successfully'),
+        400: openapi.Response(description='Invalid request data'),
+        401: openapi.Response(description='Not authorized'),
+        404: openapi.Response(description='Developer not found')
+    },
+    operation_summary='Updates a developer',
+    operation_description='Updates a developer identified by the given primary key'
+)
     def put(self, request, pk):
         if not request.user.is_authenticated or not request.user.is_admin:
             return Response({'error': 'Not authorized'}, status=status.HTTP_401_UNAUTHORIZED)
