@@ -9,6 +9,8 @@ from accounts.models import CustomUser
 from accounts.forms import CustomUserCreationForm
 from .serializers import DeveloperSerializer
 
+
+# TODO: Rename classes to friendly ones. install flake8, black and isort
 class UserLoginAPIView(APIView):
     def post(self, request, format=None):
         username = request.data.get('username')
