@@ -4,7 +4,8 @@ from rest_framework import status
 from accounts.models import CustomUser
 from assets.models import Asset
 from django.urls import reverse
-from .serializers import AssetSerializer
+# from .serializers import AssetSerializer
+from assets.serializers import AssetSerializer
 
 class DeveloperAPIViewTests(TestCase):
     def setUp(self):

@@ -8,7 +8,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from accounts.models import CustomUser
 from accounts.forms import CustomUserCreationForm
-from .serializers import DeveloperSerializer, AssetSerializer, DeveloperWithAssetsSerializer
+# from .serializers import AssetSerializer, DeveloperWithAssetsSerializer
+from assets.serializers import AssetSerializer, DeveloperWithAssetsSerializer
+from accounts.serializers import DeveloperSerializer
 
 from assets.models import Asset
 
