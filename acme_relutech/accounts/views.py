@@ -10,6 +10,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 import json
 from accounts.serializers import DeveloperSerializer
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 
 
@@ -80,16 +82,29 @@ def dashboard(request):
 
 User = get_user_model()
 
+@api_view(['POST', 'GET'])
 @login_required
 def create_developer(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
+            print("form valid")
             user = form.save(commit=False)
             user.is_admin = False
             user.save()
             messages.success(request, 'Developer user created successfully.')
-            return redirect('dashboard')
+            if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
+                developers = CustomUser.objects.get_developers()
+                developers_json = DeveloperSerializer(developers, many=True).data
+                return Response({'developers': developers_json})
+            else:
+                return redirect('dashboard')
     else:
+        print("algo")
         form = CustomUserCreationForm()
-    return render(request, 'create_developer.html', {'form': form})
+    
+    if request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
+        print("hola")
+        return Response({'form': str(form)})
+    else:
+        return render(request, 'create_developer.html', {'form': form})
