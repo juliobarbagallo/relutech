@@ -7,6 +7,10 @@ name = "pypi"
 django = "*"
 djangorestframework = "*"
 drf-yasg = "*"
+black = "*"
+flake8 = "*"
+isort = "*"
+pre-commit = "*"
 
 [dev-packages]
 

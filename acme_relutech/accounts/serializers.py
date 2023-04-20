@@ -1,10 +1,12 @@
-from rest_framework  import serializers
 from accounts.models import CustomUser
+from rest_framework import serializers
+
 
 class DeveloperSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['last_login', 'email', 'username', 'is_active']
+        fields = ["last_login", "email", "username", "is_active"]
+
 
 class SwaggDeveloperSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
@@ -14,9 +16,9 @@ class SwaggDeveloperSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'username', 'password1', 'password2', 'is_admin']
+        fields = ["email", "username", "password1", "password2", "is_admin"]
 
     def validate(self, data):
-        if data['password1'] != data['password2']:
+        if data["password1"] != data["password2"]:
             raise serializers.ValidationError("The passwords do not match.")
         return data
