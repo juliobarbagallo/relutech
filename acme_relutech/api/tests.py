@@ -6,7 +6,7 @@ from assets.models import Asset
 from django.urls import reverse
 from .serializers import AssetSerializer
 
-class DeveloperListCreateAPIViewTests(TestCase):
+class DeveloperAPIViewTests(TestCase):
     def setUp(self):
         self.admin_user = CustomUser.objects.create_superuser(
             username='root',
@@ -113,7 +113,7 @@ class DeveloperListCreateAPIViewTests(TestCase):
         self.assertEqual(developer.email, updated_data['email'])
         self.assertEqual(developer.is_admin, updated_data['is_admin'])
 
-class AssetListViewTestCase(TestCase):
+class AssetViewTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = CustomUser.objects.create_user(
@@ -143,6 +143,8 @@ class AssetListViewTestCase(TestCase):
         }
         self.asset = Asset.objects.create(
             brand='Dell', model='Latitude', type=Asset.LAPTOP, developer=self.user)
+        self.developer_asset = Asset.objects.create(
+            brand='Dell', model='Latitude', type=Asset.LAPTOP, developer=self.developer_user)
 
     def test_get_all_assets(self):
         """
@@ -229,3 +231,38 @@ class AssetListViewTestCase(TestCase):
         }
         response = self.client.post(reverse('api:asset-assignments', kwargs={'pk': self.developer_user.id}), data=data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_asset_by_admin(self):
+        """
+        Test that authenticated admin user can delete an asset.
+        """
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.delete(reverse('api:asset-delete', kwargs={'developer_id': self.developer_user.id, 'asset_id': self.developer_asset.id}))
+        # print("RRR: ", response.content.decode())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_delete_asset_by_unauthorized_user(self):
+        """
+        Test that unauthorized user cannot delete an asset.
+        """
+        self.client.force_authenticate(user=None)
+        response = self.client.delete(reverse('api:asset-delete', kwargs={'developer_id': self.user.id, 'asset_id': self.asset.id}))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_delete_nonexistent_asset(self):
+        """
+        Test that trying to delete a nonexistent asset returns a 404 status code.
+        """
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.delete(reverse('api:asset-delete', kwargs={'developer_id': self.user.id, 'asset_id': 999}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_asset_by_non_admin_user(self):
+        """
+        Test that non-admin user cannot delete an asset.
+        """
+        non_admin_user = CustomUser.objects.create_user(
+            username='nonadmin', email='nonadmin@example.com', password='testpass', is_admin=False)
+        self.client.force_authenticate(user=non_admin_user)
+        response = self.client.delete(reverse('api:asset-delete', kwargs={'developer_id': self.user.id, 'asset_id': self.asset.id}))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

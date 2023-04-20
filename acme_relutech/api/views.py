@@ -27,7 +27,7 @@ class UserLoginAPIView(APIView):
         return Response({'success': True})
     
 
-class DeveloperListCreateAPIView(APIView):
+class DevelopersAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -77,7 +77,7 @@ class DeveloperListCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 
-class AssetAssignmentsAPIView(APIView):
+class AssetsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk=None):
