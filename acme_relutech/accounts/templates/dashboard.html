@@ -10,6 +10,7 @@
             <li>{{ developer.username }}</li>
         {% endfor %}
         </ul>
+        <a href="{% url 'create_developer' %}" class="btn btn-primary">Add New Developer</a>
     {% endif %}
 </div>
 {% endblock %}
