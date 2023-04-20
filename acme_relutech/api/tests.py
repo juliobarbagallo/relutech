@@ -2,7 +2,9 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 from accounts.models import CustomUser
+from assets.models import Asset
 from django.urls import reverse
+from .serializers import AssetSerializer
 
 class DeveloperListCreateAPIViewTests(TestCase):
     def setUp(self):
@@ -27,12 +29,18 @@ class DeveloperListCreateAPIViewTests(TestCase):
         self.client = APIClient()
 
     def test_get_developers_list_authenticated_admin(self):
-        self.client.force_authenticate(user=self.admin_user)  # authenticate admin user
+        """
+        Test that authenticated admin user can retrieve a list of developers
+        """
+        self.client.force_authenticate(user=self.admin_user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_developers_list_unauthenticated(self):
-        self.client.logout()  # ensure user is not authenticated
+        """
+        Test that unauthenticated user cannot retrieve a list of developers
+        """
+        self.client.logout()
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -105,3 +113,58 @@ class DeveloperListCreateAPIViewTests(TestCase):
         self.assertEqual(developer.email, updated_data['email'])
         self.assertEqual(developer.is_admin, updated_data['is_admin'])
 
+class AssetListViewTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = CustomUser.objects.create_user(
+            username='testuser', email='testuser@example.com', password='testpass', is_admin=True)
+        self.admin_user = CustomUser.objects.create_superuser(
+            username='admin',
+            email='admin@test.com',
+            password='testpass123'
+        )
+        self.valid_payload = {
+            'brand': 'Dell',
+            'model': 'Latitude',
+            'type': Asset.LAPTOP,
+            'developer': self.user.id
+        }
+        self.invalid_payload = {
+            'brand': '',
+            'model': 'Latitude',
+            'type': Asset.LAPTOP,
+            'developer': self.user.id
+        }
+        self.asset = Asset.objects.create(
+            brand='Dell', model='Latitude', type=Asset.LAPTOP, developer=self.user)
+
+    def test_get_all_assets(self):
+        """
+        Test that authenticated admin user can retrieve a list of assets.
+        """
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(reverse('api:all_assets'))
+        assets = Asset.objects.all()
+        serializer = AssetSerializer(assets, many=True)
+        self.assertEqual(response.data, serializer.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+    def test_get_assets_by_developer(self):
+        """
+        Test that authenticated admin user can retrieve a list of assets by developer
+        """
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(reverse('api:asset-assignments', kwargs={'pk': self.user.id}))
+        assets = Asset.objects.filter(developer=self.user)
+        serializer = AssetSerializer(assets, many=True)
+        self.assertEqual(response.data, serializer.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_assets_unauthorized(self):
+        """
+        Test that unauthorized user cannot retrieve a list of assets
+        """
+        self.client.force_authenticate(user=None)
+        response = self.client.get(reverse('api:all_assets'))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

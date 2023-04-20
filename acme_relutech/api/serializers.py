@@ -8,9 +8,11 @@ class DeveloperSerializer(serializers.ModelSerializer):
         fields = ['last_login', 'email', 'username', 'is_active']
 
 class AssetSerializer(serializers.ModelSerializer):
+    developer = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
         model = Asset
         fields = ['id', 'brand', 'model', 'type', 'developer']
+        read_only_fields = ('developer',)
 
 class DeveloperWithAssetsSerializer(serializers.ModelSerializer):
     assets = AssetSerializer(many=True, read_only=True)
